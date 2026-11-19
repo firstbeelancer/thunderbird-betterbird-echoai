@@ -1,0 +1,16 @@
+# Build artifacts
+dist/
+*.xpi
+
+# Local environment & secrets
+.env
+.env.*
+*.key
+*.pem
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

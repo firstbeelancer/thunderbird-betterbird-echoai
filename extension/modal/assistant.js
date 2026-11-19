@@ -777,6 +777,15 @@ openSettingsBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ type: "OPEN_OPTIONS" });
 });
 
+// Подхватываем изменения настроек (тема, ключ, модель) на лету без перезапуска окна
+browser.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== "local" || !changes.echoai_settings_v1) return;
+  settings = await loadSettings();
+  applyTheme(settings.theme);
+  profile = getActiveProfile(settings);
+  modelPill.textContent = profile?.model || "Модель не выбрана";
+});
+
 closeBtn.addEventListener("click", () => {
   if (recorder) recorder.cancel();
   if (activeAbortController) activeAbortController.abort();

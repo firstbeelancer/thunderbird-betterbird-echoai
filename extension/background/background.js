@@ -125,6 +125,45 @@ async function handleApplyToEmail(payload) {
   throw new Error("Нет связанного письма для вставки текста.");
 }
 
+async function openOptionsTab(hash = "") {
+  const baseUrl = browser.runtime.getURL("options/options.html");
+  const targetUrl = hash ? `${baseUrl}#${hash}` : baseUrl;
+
+  try {
+    const allTabs = await browser.tabs.query({});
+    const existing = allTabs.find((t) => t.url && t.url.startsWith(baseUrl));
+    if (existing) {
+      await browser.tabs.update(existing.id, { active: true, url: targetUrl });
+      if (existing.windowId) {
+        await browser.windows.update(existing.windowId, { focused: true });
+      }
+      return { ok: true, reused: true };
+    }
+  } catch {
+    // fallback ниже
+  }
+
+  try {
+    const normalWindows = await browser.windows.getAll({ windowTypes: ["normal"] });
+    const mainWin = normalWindows?.[0];
+    if (mainWin) {
+      await browser.tabs.create({ windowId: mainWin.id, url: targetUrl, active: true });
+      await browser.windows.update(mainWin.id, { focused: true });
+      return { ok: true, windowId: mainWin.id };
+    }
+  } catch {
+    // fallback ниже
+  }
+
+  await browser.windows.create({
+    url: targetUrl,
+    type: "popup",
+    width: 980,
+    height: 760
+  });
+  return { ok: true, standalone: true };
+}
+
 browser.runtime.onMessage.addListener((message) => {
   if (!message || !message.type) return undefined;
 
@@ -143,12 +182,17 @@ browser.runtime.onMessage.addListener((message) => {
   }
 
   if (message.type === "OPEN_OPTIONS") {
-    return browser.runtime.openOptionsPage().then(() => ({ ok: true }));
+    return openOptionsTab("").catch((err) => ({
+      ok: false,
+      error: err?.message || String(err)
+    }));
   }
 
   if (message.type === "OPEN_MIC_PERMISSION_TAB") {
-    const url = browser.runtime.getURL("options/options.html#mic");
-    return browser.tabs.create({ url }).then(() => ({ ok: true }));
+    return openOptionsTab("mic").catch((err) => ({
+      ok: false,
+      error: err?.message || String(err)
+    }));
   }
 
   return undefined;

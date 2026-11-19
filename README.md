@@ -19,7 +19,7 @@
 
 ## Установка в Betterbird / Thunderbird
 
-1. Скачайте готовый файл `echoai-1.0.1.xpi` (из `docs/download/echoai-1.0.1.xpi` или соберите командой `python tools/pack-extension.py`).
+1. Скачайте готовый файл `echoai-1.0.2.xpi` (из `docs/download/echoai-1.0.2.xpi` или соберите командой `python tools/pack-extension.py`).
 2. В Betterbird / Thunderbird откройте **Дополнения и темы** → иконка шестерёнки → **Установить дополнение из файла…** → выберите `.xpi`.
 3. Откройте настройки **EchoAI**, выберите провайдера (например, **Clodex**), вставьте API-ключ, выберите или введите модель и нажмите **«Протестировать подключение»**.
 

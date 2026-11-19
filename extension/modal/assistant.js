@@ -804,7 +804,6 @@ function renderContextHeader() {
   document.title = `${meta.title} — EchoAI`;
   modeTitle.textContent = meta.title;
   modeIcon.replaceChildren(createIcon(meta.icon, "icon-lg"));
-  subjectLine.textContent = session.subject || "(без темы)";
 
   if (session.context === "display" && session.thread) {
     const count = session.thread.messageCount;
@@ -821,6 +820,11 @@ function renderContextHeader() {
       contextPill.textContent = "Новое письмо";
     }
   }
+
+  const rawSubject = (session.subject || "").trim();
+  const isDuplicatePlaceholder =
+    !rawSubject || rawSubject.toLowerCase() === `(${contextPill.textContent.toLowerCase()})`;
+  subjectLine.textContent = isDuplicatePlaceholder ? "Тема пока не указана" : rawSubject;
 
   // В чате и при улучшении показываем спокойный баннер о загруженном контексте
   if (currentMode === "chat") {

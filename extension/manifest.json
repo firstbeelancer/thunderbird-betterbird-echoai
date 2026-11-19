@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EchoAI",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Персональный ИИ-ассистент для Betterbird и Thunderbird с подключением любых OpenAI-compatible API и прямым голосовым вводом в мультимодальную LLM.",
   "author": "Marina Kalmykova (firstbeelancer)",
   "homepage_url": "https://github.com/firstbeelancer/thunderbird-betterbird-echoai",

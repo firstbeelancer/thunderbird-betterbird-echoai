@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "EchoAI",
+  "version": "1.0.0",
+  "description": "Персональный ИИ-ассистент для Betterbird и Thunderbird с подключением любых OpenAI-compatible API и прямым голосовым вводом в мультимодальную LLM.",
+  "author": "Marina Kalmykova (firstbeelancer)",
+  "homepage_url": "https://github.com/firstbeelancer/thunderbird-betterbird-echoai",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "echoai@firstbeelancer.github.io",
+      "strict_min_version": "128.0"
+    }
+  },
+  "icons": {
+    "16": "icons/echoai.svg",
+    "32": "icons/echoai.svg",
+    "48": "icons/echoai.svg",
+    "64": "icons/echoai.svg",
+    "128": "icons/echoai.svg"
+  },
+  "permissions": [
+    "storage",
+    "messagesRead",
+    "compose",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*"
+  ],
+  "background": {
+    "page": "background/background.html"
+  },
+  "message_display_action": {
+    "default_title": "EchoAI",
+    "default_label": "EchoAI",
+    "default_icon": {
+      "16": "icons/echoai.svg",
+      "32": "icons/echoai.svg"
+    },
+    "default_popup": "popup/menu.html?context=display"
+  },
+  "compose_action": {
+    "default_title": "EchoAI",
+    "default_label": "EchoAI",
+    "default_icon": {
+      "16": "icons/echoai.svg",
+      "32": "icons/echoai.svg"
+    },
+    "default_popup": "popup/menu.html?context=compose"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}

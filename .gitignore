@@ -1,6 +1,7 @@
 # Build artifacts
 dist/
 *.xpi
+!docs/download/*.xpi
 
 # Local environment & secrets
 .env

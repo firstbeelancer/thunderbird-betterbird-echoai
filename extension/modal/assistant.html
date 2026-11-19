@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <title>EchoAI</title>
+  <link rel="stylesheet" href="../shared/design.css">
+  <link rel="stylesheet" href="assistant.css">
+</head>
+<body>
+  <div class="assistant-app">
+    <!-- Top Header -->
+    <header class="top-bar">
+      <div class="top-left">
+        <div id="modeIcon" class="mode-badge-icon"></div>
+        <div class="top-titles">
+          <div class="title-row">
+            <h1 id="modeTitle" class="mode-title">EchoAI</h1>
+            <span id="contextPill" class="context-pill"></span>
+          </div>
+          <div id="subjectLine" class="subject-line"></div>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <div id="translateLangWrap" class="lang-picker" hidden>
+          <label for="translateLangSelect" class="sr-only">Язык перевода</label>
+          <select id="translateLangSelect" class="select select-compact"></select>
+        </div>
+        <span id="modelPill" class="model-pill" title="Активная модель"></span>
+        <button id="openSettingsBtn" class="btn btn-ghost btn-icon" title="Настройки EchoAI" aria-label="Настройки EchoAI"></button>
+      </div>
+    </header>
+
+    <!-- Main scrollable conversation / output area -->
+    <main id="chatScroll" class="chat-scroll">
+      <div id="contextBanner" class="context-banner" hidden></div>
+      <div id="messagesList" class="messages-list"></div>
+
+      <!-- Live animated AI status (never exposes raw chain-of-thought) -->
+      <div id="statusIndicator" class="status-indicator" hidden>
+        <div class="status-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <span id="statusText" class="status-text">Думает…</span>
+      </div>
+
+      <div id="errorBanner" class="error-banner" hidden>
+        <span id="errorIcon" class="error-banner-icon"></span>
+        <div class="error-banner-content">
+          <div id="errorText"></div>
+          <div id="errorActions" class="error-banner-actions"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom dock: Telemetry/Actions Row + Composer (aligned with reference) -->
+    <footer class="bottom-dock">
+      <div class="dock-toolbar">
+        <div class="dock-toolbar-left">
+          <button id="primaryApplyBtn" class="btn btn-primary btn-pill" hidden></button>
+          <button id="copyLastBtn" class="btn btn-pill" disabled></button>
+          <button id="regenBtn" class="btn btn-pill" hidden></button>
+
+          <div class="token-wrap">
+            <button id="tokenPillBtn" class="btn btn-pill token-pill tabular" type="button" disabled>
+              <span id="tokenPillValue">0 tokens</span>
+              <span id="tokenChevron" class="token-chevron"></span>
+            </button>
+            <div id="tokenPopover" class="token-popover" hidden>
+              <div class="token-popover-title">Расход токенов</div>
+              <div class="token-row">
+                <span>Входные (контекст)</span>
+                <strong id="tokPrompt" class="tabular">0</strong>
+              </div>
+              <div class="token-row">
+                <span>Выходные (ответ)</span>
+                <strong id="tokCompletion" class="tabular">0</strong>
+              </div>
+              <div class="token-divider"></div>
+              <div class="token-row token-row-total">
+                <span>Всего за сессию</span>
+                <strong id="tokTotal" class="tabular">0</strong>
+              </div>
+              <div id="tokEstimatedNote" class="token-note" hidden>
+                Провайдер не вернул точную статистику — показана оценка.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button id="closeBtn" class="btn btn-pill close-btn" type="button">Закрыть</button>
+      </div>
+
+      <!-- Composer: Text input + Direct Multimodal Voice Recording -->
+      <div class="composer-shell">
+        <!-- Standard Text + Mic Composer -->
+        <div id="textComposer" class="composer-box">
+          <textarea
+            id="promptInput"
+            class="composer-textarea"
+            rows="1"
+            placeholder="Напишите инструкцию или нажмите микрофон для голосовой заметки…"
+          ></textarea>
+          <div class="composer-actions">
+            <button id="micBtn" class="btn btn-ghost btn-icon mic-btn" type="button" title="Записать голосовую заметку" aria-label="Записать голосовую заметку"></button>
+            <button id="sendBtn" class="send-btn" type="button" title="Отправить (Enter)" aria-label="Отправить"></button>
+          </div>
+        </div>
+
+        <!-- Active Voice Recording Bar -->
+        <div id="recordBar" class="record-bar" hidden>
+          <div class="record-left">
+            <span class="record-dot" aria-hidden="true"></span>
+            <span class="record-label">Запись голоса</span>
+            <span id="recordTimer" class="record-timer tabular">0:00</span>
+            <div id="recordMeter" class="record-meter" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="record-actions">
+            <button id="cancelRecordBtn" class="btn btn-pill" type="button">Отмена</button>
+            <button id="sendRecordBtn" class="send-btn" type="button" title="Отправить голосовую заметку" aria-label="Отправить голосовую заметку"></button>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="assistant.js"></script>
+</body>
+</html>

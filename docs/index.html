@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EchoAI — ИИ-ассистент для Betterbird и Thunderbird</title>
+  <meta name="description" content="Бесплатное открытое расширение для Betterbird и Thunderbird с подключением любых OpenAI-compatible API и прямым голосовым вводом в мультимодальную LLM.">
+  <style>
+    :root {
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+      --bg: #f3f6fb;
+      --surface: #ffffff;
+      --subtle: #f7f9fc;
+      --hover: #edf2f8;
+      --border: #d9e2ee;
+      --border-strong: #bccad9;
+      --text: #16202d;
+      --text-2: #536478;
+      --muted: #7c8da1;
+      --accent: #2b5c96;
+      --accent-hover: #224b7c;
+      --accent-soft: #e9f1fa;
+      --accent-border: #bfd4ec;
+      --success: #157a54;
+      --success-bg: #eaf7f1;
+      --success-border: #bce2d1;
+      --danger: #c4323f;
+      --danger-bg: #fdf0f1;
+      --shadow: 0 12px 32px rgba(22, 32, 45, 0.08);
+      --shadow-sm: 0 2px 10px rgba(22, 32, 45, 0.05);
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0f141b;
+      --surface: #171e27;
+      --subtle: #1c2530;
+      --hover: #232e3c;
+      --border: #263242;
+      --border-strong: #394a60;
+      --text: #e8eef5;
+      --text-2: #9aa9bc;
+      --muted: #718298;
+      --accent: #5a96db;
+      --accent-hover: #70a8e6;
+      --accent-soft: rgba(90, 150, 219, 0.15);
+      --accent-border: rgba(90, 150, 219, 0.36);
+      --success: #3fc48f;
+      --success-bg: rgba(63, 196, 143, 0.13);
+      --success-border: rgba(63, 196, 143, 0.34);
+      --danger: #f06e7a;
+      --danger-bg: rgba(240, 110, 122, 0.14);
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+      --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.28);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    svg.ic {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Top Nav */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 650;
+      font-size: 16px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .brand:hover { text-decoration: none; }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .nav-links a { color: var(--text-2); font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 550;
+      cursor: pointer;
+      transition: all 140ms ease;
+      text-decoration: none;
+    }
+
+    .btn:hover { background: var(--hover); text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    :root[data-theme="dark"] .btn-primary { color: #0a1624; }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+    .btn-sm { height: 34px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
+
+    /* Hero */
+    .hero {
+      padding: 64px 0 44px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 44px;
+      align-items: center;
+    }
+
+    @media (max-width: 880px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(32px, 4.4vw, 46px);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+
+    .hero-lead {
+      margin: 0 0 26px;
+      font-size: 16.5px;
+      color: var(--text-2);
+      max-width: 540px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hero-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Interactive Preview Window */
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--subtle);
+    }
+
+    .preview-head-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .preview-icon-box {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-title { font-size: 13.5px; font-weight: 600; }
+    .preview-sub { font-size: 11.5px; color: var(--muted); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .pill-muted {
+      background: var(--subtle);
+      color: var(--text-2);
+      border-color: var(--border);
+    }
+
+    .preview-body {
+      padding: 16px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bubble-user {
+      align-self: flex-end;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-radius: 13px 13px 4px 13px;
+      padding: 10px 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .play-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bubble-ai {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px 13px 13px 4px;
+      padding: 13px 15px;
+      font-size: 13.5px;
+      line-height: 1.52;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .bubble-ai p { margin: 0 0 8px; }
+    .bubble-ai p:last-child { margin: 0; }
+
+    .preview-dock {
+      padding: 10px 14px 13px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .dock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .dock-left { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+    .fake-input {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 6px 6px 13px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .fake-send {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--accent);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Sections */
+    .section {
+      padding: 44px 0;
+    }
+
+    .section-head {
+      margin-bottom: 26px;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-desc {
+      margin: 0;
+      color: var(--text-2);
+      font-size: 15px;
+      max-width: 660px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 820px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 6px;
+      font-size: 15.5px;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--text-2);
+    }
+
+    /* Interactive Showcase Tabs */
+    .tabs-bar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 11px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13.5px;
+      font-weight: 550;
+      cursor: pointer;
+    }
+
+    .tab-btn.is-active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .showcase-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 720px) {
+      .before-after { grid-template-columns: 1fr; }
+    }
+
+    .ba-box {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--subtle);
+    }
+
+    .ba-box.is-after {
+      background: var(--surface);
+      border-color: var(--accent-border);
+    }
+
+    .ba-label {
+      font-size: 11.5px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .ba-box.is-after .ba-label { color: var(--accent); }
+
+    .providers-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .provider-badge {
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: var(--subtle);
+      border: 1px solid var(--border);
+      font-size: 13.5px;
+      font-weight: 550;
+    }
+
+    .provider-badge span {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Install Steps */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .steps-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .step-card h3 { margin: 0 0 6px; font-size: 14.5px; }
+    .step-card p { margin: 0; font-size: 13px; color: var(--text-2); }
+
+    footer {
+      margin-top: 32px;
+      padding: 26px 0 40px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="#">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <rect x="4" y="4" width="56" height="56" rx="16" fill="#2B5C96"/>
+          <path d="M21 39.5V24.5C21 23.1193 22.1193 22 23.5 22H31" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M21 32H29.5" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M21 39.5H31" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M36.5 26.2C38.6 27.6 39.9 29.7 39.9 32C39.9 34.3 38.6 36.4 36.5 37.8" stroke="#CFE3FA" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M42.2 21.8C45.8 24.3 48 28 48 32C48 36 45.8 39.7 42.2 42.2" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
+        </svg>
+        <span>EchoAI</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Навигация">
+        <a href="#features">Возможности</a>
+        <a href="#showcase">Как это выглядит</a>
+        <a href="#providers">Провайдеры</a>
+        <a href="#install">Установка</a>
+      </nav>
+
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button id="themeToggle" class="btn btn-sm" type="button">Тёмная тема</button>
+        <a class="btn btn-primary btn-sm" href="https://github.com/firstbeelancer/thunderbird-betterbird-echoai" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <span>Бесплатное расширение · Betterbird &amp; Thunderbird 128+</span>
+          </div>
+          <h1>ИИ-ассистент в почте, который работает только когда вы его зовёте</h1>
+          <p class="hero-lead">
+            Подключайте любые OpenAI-compatible модели, читайте длинные ветки целиком, переводите эмоциональные черновики в этичный деловой стиль и диктуйте голосовые заметки напрямую в мультимодальную LLM.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="./download/echoai-1.0.0.xpi" download>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Скачать EchoAI 1.0.0 (.xpi)</span>
+            </a>
+            <a class="btn" href="#install">Инструкция установки</a>
+          </div>
+          <div class="hero-meta">
+            <span>
+              <svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Без фонового сканирования ящика
+            </span>
+            <span>
+              <svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Сохраняет HTML-подпись Betterbird
+            </span>
+          </div>
+        </div>
+
+        <!-- Live Visual Preview of Modal -->
+        <div class="preview-card" aria-label="Превью окна диалога EchoAI">
+          <div class="preview-head">
+            <div class="preview-head-left">
+              <div class="preview-icon-box">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <div class="preview-title">Чат с ассистентом</div>
+                <div class="preview-sub">Re: Поставка партии #412 · Ветка: 5 писем</div>
+              </div>
+            </div>
+            <span class="pill pill-muted">gemini-4-hydrogen-high</span>
+          </div>
+
+          <div class="preview-body">
+            <div class="bubble-user">
+              <span class="play-circle">
+                <svg class="ic" style="width:12px;height:12px" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+              </span>
+              <span>Голосовая заметка · 0:14</span>
+            </div>
+
+            <div class="bubble-ai">
+              <p>Коллеги, добрый день.</p>
+              <p>Сдвиг сроков по партии #412 для нас критичен — от неё зависит запуск следующей недели. Прошу сегодня до 16:00 прислать точный обновлённый график и подтвердить, какой объём вы сможете отгрузить в первую очередь.</p>
+              <p>Марина</p>
+            </div>
+          </div>
+
+          <div class="preview-dock">
+            <div class="dock-row">
+              <div class="dock-left">
+                <span class="pill" style="background:var(--accent);color:#fff;border-color:var(--accent);">Вставить в ответ</span>
+                <span class="pill">
+                  <svg class="ic" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy
+                </span>
+                <span class="pill pill-muted">1 581 tokens</span>
+              </div>
+              <span class="pill">Закрыть</span>
+            </div>
+            <div class="fake-input">
+              <span>Напишите инструкцию или нажмите микрофон…</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                <span class="fake-send">
+                  <svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title">Всё нужное — без лишнего шума</h2>
+          <p class="section-desc">Кнопка EchoAI доступна и при чтении входящих писем, и в окне создания нового письма или ответа.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+            </div>
+            <h3>Быстрый ответ по всей ветке</h3>
+            <p>Собирает все реплики переписки в хронологическом порядке и сразу предлагает готовый ответ. Одним кликом вставляет его выше вашей HTML-подписи.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </div>
+            <h3>Голос напрямую в LLM</h3>
+            <p>Никаких отдельных STT-сервисов и вторых ключей. Компактный WAV 16 kHz летит напрямую в вашу мультимодальную модель вместе с контекстом письма.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </div>
+            <h3>Улучшить текст и тон</h3>
+            <p>Выделите сырой или эмоциональный черновик в редакторе — ассистент переведёт его в этичный, живой деловой формат без канцеляризмов и без потери позиции.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+            </div>
+            <h3>Краткое саммари</h3>
+            <p>Для одного письма — короткая выжимка; для длинной ветки — единое структурированное резюме: суть, договорённости, сроки и открытые вопросы.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <h3>Перевод без лишних вкладок</h3>
+            <p>Переводит входящие письма и ваши черновики на нужный язык прямо в модалке с мгновенным переключением целевого языка.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <h3>Прозрачный контроль</h3>
+            <p>Копирование любой реплики, точный счётчик токенов с разбивкой, анимированный статус работы модели без сырых «мыслей» и 100% локальные ключи.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Showcase -->
+    <section id="showcase" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title">Как это работает на практике</h2>
+          <p class="section-desc">Переключайте сценарии, чтобы посмотреть живые примеры работы EchoAI.</p>
+        </div>
+
+        <div class="tabs-bar" role="tablist">
+          <button class="tab-btn is-active" data-tab="improve" type="button">Улучшить текст</button>
+          <button class="tab-btn" data-tab="menus" type="button">Меню в письме</button>
+          <button class="tab-btn" data-tab="providers" type="button">Подключение API</button>
+        </div>
+
+        <div id="tab-improve" class="showcase-panel">
+          <div class="before-after">
+            <div class="ba-box">
+              <div class="ba-label">Ваш сырой черновик в редакторе</div>
+              <p style="margin:0;font-size:14px;">«Опять вы сорвали сроки, сколько можно?! Почему нельзя было предупредить заранее, теперь нам всё перекраивать. Скажите нормально, когда ждать товар.»</p>
+            </div>
+            <div class="ba-box is-after">
+              <div class="ba-label">Результат «Улучшить текст» (этично и твёрдо)</div>
+              <p style="margin:0;font-size:14px;">«Коллеги, ситуация со срывом сроков повторяется, и для нас это серьёзный риск — сейчас приходится экстренно перестраивать график. Прошу в будущем предупреждать о задержках заранее и сегодня до конца дня назвать точную дату отгрузки.»</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-menus" class="showcase-panel" hidden>
+          <div class="before-after">
+            <div class="ba-box is-after">
+              <div class="ba-label">При чтении письма</div>
+              <ol style="margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px;">
+                <li><strong>Быстрый ответ</strong> — готовый вариант по всей ветке</li>
+                <li><strong>Чат с ассистентом</strong> — диалог текстом и голосом</li>
+                <li><strong>Краткое саммари</strong> — суть письма или всей переписки</li>
+                <li><strong>Перевод</strong> — быстрый перевод на выбранный язык</li>
+              </ol>
+            </div>
+            <div class="ba-box is-after">
+              <div class="ba-label">При создании / редактировании письма</div>
+              <ol style="margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px;">
+                <li><strong>Улучшить текст</strong> — выделенный фрагмент или черновик</li>
+                <li><strong>Чат с ассистентом</strong> — надиктовать или обсудить текст</li>
+                <li><strong>Быстрый ответ</strong> — ответ по контексту переписки</li>
+                <li><strong>Краткое саммари</strong> — выжимка ветки или черновика</li>
+                <li><strong>Перевод</strong> — перевести черновик и заменить на месте</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-providers" class="showcase-panel" hidden>
+          <p style="margin:0 0 14px;font-size:14px;color:var(--text-2);">
+            Умная нормализация URL принимает и базовый домен, и <code>/v1</code>, и полный <code>/v1/chat/completions</code> без двойных путей. В настройках есть загрузка списка моделей скопом, ручной ввод ID модели и кнопка <strong>«Протестировать подключение»</strong>.
+          </p>
+          <div class="providers-strip">
+            <div class="provider-badge">Clodex<span>https://clodex.xyz/v1</span></div>
+            <div class="provider-badge">OpenRouter<span>https://openrouter.ai/api/v1</span></div>
+            <div class="provider-badge">CometAPI<span>https://api.cometapi.com/v1</span></div>
+            <div class="provider-badge">OpenAI<span>https://api.openai.com/v1</span></div>
+            <div class="provider-badge">Google Gemini<span>.../v1beta/openai</span></div>
+            <div class="provider-badge">Custom API<span>Любой OpenAI-compatible URL</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Providers quick anchor -->
+    <section id="providers" class="section" style="padding-top: 8px;">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title">Поддерживаемые провайдеры</h2>
+          <p class="section-desc">Готовые пресеты с правильными URL уже встроены в настройки, плюс можно подключить любой сторонний или локальный сервер.</p>
+        </div>
+        <div class="providers-strip">
+          <div class="provider-badge">Clodex<span>Мультимодальные модели и аудио</span></div>
+          <div class="provider-badge">OpenRouter<span>Единый шлюз к сотням моделей</span></div>
+          <div class="provider-badge">CometAPI<span>Агрегатор OpenAI-compatible API</span></div>
+          <div class="provider-badge">OpenAI<span>Официальный API</span></div>
+          <div class="provider-badge">Google Gemini<span>OpenAI-compatible режим</span></div>
+          <div class="provider-badge">Custom API<span>Ollama, LM Studio, LiteLLM и др.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section id="install" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title">Установка в Betterbird / Thunderbird</h2>
+          <p class="section-desc">Занимает меньше минуты и не требует сборки или регистрации.</p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-num">1</div>
+            <h3>Скачайте .xpi</h3>
+            <p>Загрузите файл <code>echoai-1.0.0.xpi</code> со страницы релизов или по кнопке выше.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-num">2</div>
+            <h3>Установите из файла</h3>
+            <p>Откройте Betterbird → Дополнения и темы → шестерёнка → «Установить дополнение из файла».</p>
+          </div>
+          <div class="step-card">
+            <div class="step-num">3</div>
+            <h3>Подключите API</h3>
+            <p>Выберите пресет (например, Clodex), вставьте ключ, укажите модель и нажмите «Протестировать подключение».</p>
+          </div>
+          <div class="step-card">
+            <div class="step-num">4</div>
+            <h3>Пользуйтесь в письмах</h3>
+            <p>Кнопка EchoAI появится в шапке открытых писем и на панели окна создания письма.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>EchoAI · Открытый бесплатный проект для Betterbird и Thunderbird</span>
+      <a href="https://github.com/firstbeelancer/thunderbird-betterbird-echoai" target="_blank" rel="noopener">github.com/firstbeelancer/thunderbird-betterbird-echoai</a>
+    </div>
+  </footer>
+
+  <script>
+    const root = document.documentElement;
+    const themeBtn = document.getElementById("themeToggle");
+    themeBtn.addEventListener("click", () => {
+      const dark = root.getAttribute("data-theme") === "dark";
+      root.setAttribute("data-theme", dark ? "light" : "dark");
+      themeBtn.textContent = dark ? "Тёмная тема" : "Светлая тема";
+    });
+
+    const tabBtns = Array.from(document.querySelectorAll(".tab-btn"));
+    const panels = {
+      improve: document.getElementById("tab-improve"),
+      menus: document.getElementById("tab-menus"),
+      providers: document.getElementById("tab-providers")
+    };
+    tabBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.tab;
+        tabBtns.forEach((b) => b.classList.toggle("is-active", b === btn));
+        Object.entries(panels).forEach(([k, el]) => { el.hidden = k !== key; });
+      });
+    });
+  </script>
+</body>
+</html>

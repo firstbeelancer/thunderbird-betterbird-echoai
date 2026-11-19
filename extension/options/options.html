@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <title>Настройки — EchoAI</title>
+  <link rel="stylesheet" href="../shared/design.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-page">
+    <header class="opt-header">
+      <div class="opt-brand">
+        <img src="../icons/echoai.svg" alt="" width="34" height="34" class="opt-logo">
+        <div>
+          <h1 class="opt-title">EchoAI</h1>
+          <p class="opt-subtitle">Настройки подключений, стиля ответов и голосового ввода</p>
+        </div>
+      </div>
+      <div class="opt-header-right">
+        <span id="saveIndicator" class="save-indicator" hidden></span>
+        <button id="saveBtn" class="btn btn-primary" type="button">Сохранить</button>
+      </div>
+    </header>
+
+    <div class="opt-layout">
+      <nav class="opt-nav" aria-label="Разделы настроек">
+        <button class="nav-btn is-active" data-section="api" type="button">
+          <span class="nav-icon" data-icon="settings"></span>
+          <span>Подключение API</span>
+        </button>
+        <button class="nav-btn" data-section="prompts" type="button">
+          <span class="nav-icon" data-icon="improve"></span>
+          <span>Мой стиль и промпты</span>
+        </button>
+        <button class="nav-btn" data-section="mic" type="button">
+          <span class="nav-icon" data-icon="mic"></span>
+          <span>Микрофон и тема</span>
+        </button>
+      </nav>
+
+      <main class="opt-main">
+        <!-- SECTION 1: API & PROVIDERS -->
+        <section id="section-api" class="opt-section">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Профили подключений</h2>
+                <p class="card-desc">Подключайте любые OpenAI-compatible агрегаторы и переключайтесь между ними.</p>
+              </div>
+              <button id="addProfileBtn" class="btn btn-soft" type="button"></button>
+            </div>
+            <div id="profilesList" class="profiles-row"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Параметры активного профиля</h2>
+                <p id="presetHint" class="card-desc"></p>
+              </div>
+              <button id="deleteProfileBtn" class="btn btn-danger-soft" type="button" hidden></button>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label class="field-label" for="profileNameInput">Название профиля</label>
+                <input id="profileNameInput" class="input" type="text" placeholder="Например: Clodex основной">
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="providerSelect">Провайдер (пресет)</label>
+                <select id="providerSelect" class="select"></select>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="baseUrlInput">URL эндпойнта</label>
+                <input id="baseUrlInput" class="input" type="url" placeholder="https://clodex.xyz/v1">
+                <div id="urlPreview" class="field-hint"></div>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="apiKeyInput">API-ключ</label>
+                <div class="input-with-btn">
+                  <input id="apiKeyInput" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-...">
+                  <button id="toggleKeyBtn" class="btn btn-icon" type="button" title="Показать / скрыть ключ" aria-label="Показать или скрыть ключ"></button>
+                </div>
+                <div class="field-hint">Ключ хранится только локально в профиле Betterbird и никуда не отправляется, кроме указанного URL.</div>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="modelInput">Модель</label>
+                <div class="model-controls">
+                  <input id="modelInput" class="input" type="text" placeholder="Введите ID модели вручную или загрузите список">
+                  <button id="fetchModelsBtn" class="btn" type="button"></button>
+                </div>
+
+                <div id="modelsListWrap" class="models-picker" hidden>
+                  <div class="models-picker-head">
+                    <input id="modelSearchInput" class="input input-sm" type="search" placeholder="Фильтр по загруженным моделям…">
+                    <span id="modelsCount" class="models-count tabular"></span>
+                  </div>
+                  <div id="modelsSelectList" class="models-list"></div>
+                </div>
+                <div class="field-hint">Для голосового ввода выбирайте мультимодальную модель с поддержкой аудио (например, <code>gemini-4-hydrogen-high</code> или <code>gemini-2.5-flash</code>).</div>
+              </div>
+            </div>
+
+            <div class="test-bar">
+              <button id="testConnBtn" class="btn btn-primary" type="button"></button>
+              <div id="testResult" class="test-result" hidden></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: STYLE & PROMPTS -->
+        <section id="section-prompts" class="opt-section" hidden>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Мой стиль и подпись</h2>
+                <p class="card-desc">Эти правила применяются ко всем ответам и правкам ассистента.</p>
+              </div>
+              <button id="resetPromptsBtn" class="btn" type="button">Сбросить всё по умолчанию</button>
+            </div>
+
+            <div class="form-grid">
+              <div class="field field-full">
+                <label class="field-label" for="userNameInput">Имя для подписи (опционально)</label>
+                <input id="userNameInput" class="input" type="text" placeholder="Например: Марина">
+                <div class="field-hint">В Betterbird уже используется ваша HTML-подпись — нейросеть не будет дописывать должность и контакты, а укажет максимум только это имя.</div>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="globalStyleInput">Общий системный промпт («Мой стиль»)</label>
+                <textarea id="globalStyleInput" class="textarea" rows="5"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Промпты для действий меню</h2>
+                <p class="card-desc">Настройте поведение каждого пункта под свои задачи.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field field-full">
+                <label class="field-label" for="promptImproveInput">Улучшить текст (перевод эмоций и черновика в этичный деловой стиль)</label>
+                <textarea id="promptImproveInput" class="textarea" rows="4"></textarea>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="promptQuickReplyInput">Быстрый ответ</label>
+                <textarea id="promptQuickReplyInput" class="textarea" rows="3"></textarea>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="promptChatInput">Чат с ассистентом</label>
+                <textarea id="promptChatInput" class="textarea" rows="3"></textarea>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="promptSummaryInput">Краткое саммари</label>
+                <textarea id="promptSummaryInput" class="textarea" rows="4"></textarea>
+              </div>
+
+              <div class="field field-full">
+                <label class="field-label" for="promptTranslateInput">Перевод</label>
+                <textarea id="promptTranslateInput" class="textarea" rows="3"></textarea>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="defaultReadLangSelect">Язык перевода при чтении</label>
+                <select id="defaultReadLangSelect" class="select"></select>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="defaultComposeLangSelect">Язык перевода при написании</label>
+                <select id="defaultComposeLangSelect" class="select"></select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: MIC & THEME -->
+        <section id="section-mic" class="opt-section" hidden>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Голосовой ввод (микрофон)</h2>
+                <p class="card-desc">Аудиозапись (WAV 16 kHz) отправляется напрямую в вашу мультимодальную модель без сторонних STT-сервисов.</p>
+              </div>
+            </div>
+
+            <div class="mic-check-row">
+              <button id="checkMicBtn" class="btn btn-primary" type="button"></button>
+              <div id="micStatus" class="test-result" hidden></div>
+            </div>
+            <div class="field-hint" style="margin-top: 10px;">
+              Если Betterbird не запрашивает микрофон во всплывающем окне чата, нажмите кнопку выше один раз — разрешение сохранится для всего расширения.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Оформление</h2>
+                <p class="card-desc">Выберите светлую, тёмную тему или автоматическую синхронизацию с системой.</p>
+              </div>
+            </div>
+
+            <div class="theme-segmented" role="radiogroup" aria-label="Тема оформления">
+              <button type="button" class="theme-opt" data-theme-val="auto">Системная</button>
+              <button type="button" class="theme-opt" data-theme-val="light">Светлая</button>
+              <button type="button" class="theme-opt" data-theme-val="dark">Тёмная</button>
+            </div>
+          </div>
+
+          <div class="card privacy-card">
+            <div class="privacy-row">
+              <span id="privacyShield" class="privacy-icon"></span>
+              <div>
+                <h3 class="privacy-title">Приватность и принцип «Только по вызову»</h3>
+                <p class="privacy-text">
+                  EchoAI никогда не работает в фоне, не перебирает письма и не отправляет никаких данных без вашего явного клика.
+                  Все настройки и ключи хранятся локально на вашем компьютере.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

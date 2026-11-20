@@ -19,9 +19,10 @@
 
 ## Установка в Betterbird / Thunderbird
 
-1. Скачайте готовый файл `echoai-1.0.2.xpi` (из `docs/download/echoai-1.0.2.xpi` или соберите командой `python tools/pack-extension.py`).
+1. Скачайте готовый файл `echoai-1.0.3.xpi` (из `docs/download/echoai-1.0.3.xpi` или соберите командой `python tools/pack-extension.py`).
 2. В Betterbird / Thunderbird откройте **Дополнения и темы** → иконка шестерёнки → **Установить дополнение из файла…** → выберите `.xpi`.
 3. Откройте настройки **EchoAI**, выберите провайдера (например, **Clodex**), вставьте API-ключ, выберите или введите модель и нажмите **«Протестировать подключение»**.
+4. **Для голосового ввода (один раз):** откройте в Betterbird **Настройки → Основные → Редактор настроек…**, найдите `media.navigator.permission.disabled` и переключите на `true` (в Betterbird/Thunderbird нет всплывающего диалога WebRTC-доступа к микрофону, как в Firefox).
 
 ## Сборка из исходников
 

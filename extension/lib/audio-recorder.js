@@ -75,6 +75,62 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
+export const MIC_TIMEOUT_CODE = "MIC_PROMPT_TIMEOUT";
+
+export function requestMicrophoneStream(timeoutMs = 3500) {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return Promise.reject(new Error("В этом окне недоступен API микрофона (mediaDevices)."));
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      const err = new Error(
+        "Betterbird / Thunderbird не показал окно запроса микрофона (это особенность движка). Включите параметр media.navigator.permission.disabled = true в Редакторе настроек Betterbird."
+      );
+      err.code = MIC_TIMEOUT_CODE;
+      reject(err);
+    }, timeoutMs);
+
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+      .catch((err) => {
+        if (err?.name === "OverconstrainedError") {
+          return navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        throw err;
+      })
+      .then((stream) => {
+        clearTimeout(timer);
+        if (settled) {
+          // Если промис разрешился уже после таймаута — сразу освобождаем микрофон
+          for (const t of stream.getTracks()) {
+            try { t.stop(); } catch { /* ignore */ }
+          }
+          return;
+        }
+        settled = true;
+        resolve(stream);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        if (settled) return;
+        settled = true;
+        reject(err);
+      });
+  });
+}
+
 export class WavAudioRecorder {
   constructor({ onLevel, onTick } = {}) {
     this.onLevel = onLevel;
@@ -92,18 +148,7 @@ export class WavAudioRecorder {
 
   async start() {
     if (this.recording) return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error("В этом окне недоступен API микрофона (mediaDevices).");
-    }
-
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    this.stream = await requestMicrophoneStream(3500);
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     this.audioCtx = new AudioCtx();

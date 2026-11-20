@@ -13,6 +13,7 @@ import {
 } from "../lib/providers.js";
 import { DEFAULT_PROMPTS, LANGUAGE_OPTIONS } from "../lib/prompts.js";
 import { fetchModels, testConnection } from "../lib/api-client.js";
+import { requestMicrophoneStream, MIC_TIMEOUT_CODE } from "../lib/audio-recorder.js";
 import { createIcon } from "../lib/icons.js";
 
 // Navigation
@@ -58,6 +59,7 @@ const defaultReadLangSelect = document.getElementById("defaultReadLangSelect");
 const defaultComposeLangSelect = document.getElementById("defaultComposeLangSelect");
 
 const checkMicBtn = document.getElementById("checkMicBtn");
+const copyPrefBtn = document.getElementById("copyPrefBtn");
 const micStatus = document.getElementById("micStatus");
 const themeButtons = Array.from(document.querySelectorAll(".theme-opt"));
 const privacyShield = document.getElementById("privacyShield");
@@ -71,7 +73,8 @@ deleteProfileBtn.replaceChildren(createIcon("trash", "icon-sm"), document.create
 toggleKeyBtn.appendChild(createIcon("eye"));
 fetchModelsBtn.replaceChildren(createIcon("refresh", "icon-sm"), document.createTextNode("Загрузить модели"));
 testConnBtn.replaceChildren(createIcon("shield", "icon-sm"), document.createTextNode("Протестировать подключение"));
-checkMicBtn.replaceChildren(createIcon("mic", "icon-sm"), document.createTextNode("Проверить и выдать доступ к микрофону"));
+checkMicBtn.replaceChildren(createIcon("mic", "icon-sm"), document.createTextNode("Проверить микрофон"));
+copyPrefBtn.replaceChildren(createIcon("copy", "icon-sm"), document.createTextNode("Копировать"));
 privacyShield.appendChild(createIcon("shield", "icon-lg"));
 
 let settings = null;
@@ -397,19 +400,37 @@ themeButtons.forEach((btn) => {
   });
 });
 
+copyPrefBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText("media.navigator.permission.disabled");
+    copyPrefBtn.replaceChildren(createIcon("check", "icon-sm"), document.createTextNode("Скопировано"));
+    setTimeout(() => {
+      copyPrefBtn.replaceChildren(createIcon("copy", "icon-sm"), document.createTextNode("Копировать"));
+    }, 1500);
+  } catch { /* ignore */ }
+});
+
 checkMicBtn.addEventListener("click", async () => {
   checkMicBtn.disabled = true;
-  showStatusBox(micStatus, "info", "Запрашиваю доступ к микрофону…");
+  showStatusBox(micStatus, "info", "Проверяю доступ к микрофону…");
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await requestMicrophoneStream(3500);
     for (const track of stream.getTracks()) track.stop();
-    showStatusBox(micStatus, "ok", "Доступ к микрофону разрешён. Голосовой ввод готов к работе в окне ассистента.");
+    showStatusBox(micStatus, "ok", "Доступ к микрофону работает. Голосовой ввод готов в окне ассистента.");
   } catch (err) {
-    showStatusBox(
-      micStatus,
-      "error",
-      `Доступ к микрофону не получен (${err?.message || err}). Проверьте системные настройки конфиденциальности Windows для Betterbird.`
-    );
+    if (err?.code === MIC_TIMEOUT_CODE) {
+      showStatusBox(
+        micStatus,
+        "error",
+        "Запрос микрофона завис: включите media.navigator.permission.disabled = true в Редакторе настроек Betterbird по инструкции ниже и нажмите «Проверить микрофон» ещё раз."
+      );
+    } else {
+      showStatusBox(
+        micStatus,
+        "error",
+        `Доступ к микрофону не получен (${err?.message || err}). Проверьте параметр media.navigator.permission.disabled и доступ Windows для Betterbird.`
+      );
+    }
   } finally {
     checkMicBtn.disabled = false;
   }

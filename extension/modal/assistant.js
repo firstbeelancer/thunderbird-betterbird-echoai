@@ -1,7 +1,7 @@
 import { loadSettings, getActiveProfile, getSession, applyTheme } from "../lib/storage.js";
 import { buildSystemPrompt, LANGUAGE_OPTIONS } from "../lib/prompts.js";
 import { streamChatCompletion } from "../lib/api-client.js";
-import { WavAudioRecorder, formatDuration } from "../lib/audio-recorder.js";
+import { WavAudioRecorder, formatDuration, MIC_TIMEOUT_CODE } from "../lib/audio-recorder.js";
 import { renderMarkdownToFragment } from "../lib/markdown.js";
 import { createIcon } from "../lib/icons.js";
 
@@ -654,8 +654,11 @@ function updateMeterBars(level) {
 }
 
 async function startRecording() {
-  if (isGenerating) return;
+  if (isGenerating || micBtn.disabled) return;
   clearError();
+
+  micBtn.disabled = true;
+  micBtn.replaceChildren(createIcon("loader", "icon-lg spin"));
 
   recorder = new WavAudioRecorder({
     onLevel: (lvl) => updateMeterBars(lvl),
@@ -667,17 +670,44 @@ async function startRecording() {
   try {
     recordTimer.textContent = "0:00";
     await recorder.start();
+    micBtn.disabled = false;
+    micBtn.replaceChildren(createIcon("mic", "icon-lg"));
     textComposer.hidden = true;
     recordBar.hidden = false;
   } catch (err) {
     recorder = null;
+    micBtn.disabled = false;
+    micBtn.replaceChildren(createIcon("mic", "icon-lg"));
+
+    if (err?.code === MIC_TIMEOUT_CODE) {
+      showError(
+        "В Betterbird / Thunderbird нет встроенного диалога разрешения микрофона, поэтому доступ нужно включить один раз в Редакторе настроек Betterbird: установите media.navigator.permission.disabled = true.",
+        [
+          {
+            label: "Скопировать имя параметра",
+            onClick: async (e) => {
+              try {
+                await navigator.clipboard.writeText("media.navigator.permission.disabled");
+                e.currentTarget.textContent = "Скопировано";
+              } catch { /* ignore */ }
+            }
+          },
+          {
+            label: "Пошаговая инструкция",
+            onClick: () => browser.runtime.sendMessage({ type: "OPEN_MIC_PERMISSION_TAB" })
+          }
+        ]
+      );
+      return;
+    }
+
     const msg = err?.name === "NotAllowedError" || /permission|denied/i.test(err?.message || "")
-      ? "Нет доступа к микрофону. В Betterbird разрешение на микрофон нужно один раз выдать во вкладке настроек."
+      ? "Нет доступа к микрофону. Проверьте разрешения Windows для Betterbird и параметр media.navigator.permission.disabled = true."
       : `Не удалось включить микрофон: ${err?.message || err}`;
 
     showError(msg, [
       {
-        label: "Выдать доступ к микрофону",
+        label: "Настройки микрофона",
         onClick: () => browser.runtime.sendMessage({ type: "OPEN_MIC_PERMISSION_TAB" })
       }
     ]);

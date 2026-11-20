@@ -198,8 +198,24 @@
               <button id="checkMicBtn" class="btn btn-primary" type="button"></button>
               <div id="micStatus" class="test-result" hidden></div>
             </div>
-            <div class="field-hint" style="margin-top: 10px;">
-              Если Betterbird не запрашивает микрофон во всплывающем окне чата, нажмите кнопку выше один раз — разрешение сохранится для всего расширения.
+
+            <div class="mic-guide">
+              <div class="mic-guide-title">Одноразовая настройка микрофона в Betterbird / Thunderbird</div>
+              <p class="mic-guide-desc">
+                В отличие от браузера Firefox, в Betterbird и Thunderbird нет всплывающего окна запроса микрофона — поэтому без этого параметра кнопка микрофона зависает в ожидании.
+              </p>
+              <ol class="mic-guide-steps">
+                <li>Откройте в Betterbird <strong>Настройки → Основные</strong>, пролистайте в самый низ и нажмите <strong>Редактор настроек…</strong></li>
+                <li>
+                  Вставьте в строку поиска параметр:
+                  <span class="pref-copy-row">
+                    <code>media.navigator.permission.disabled</code>
+                    <button id="copyPrefBtn" class="btn btn-pill btn-copy-pref" type="button">Копировать</button>
+                  </span>
+                </li>
+                <li>Переключите его значение с <code>false</code> на <code>true</code> (двойным кликом или кнопкой справа).</li>
+                <li>Нажмите кнопку <strong>«Проверить микрофон»</strong> выше — статус станет зелёным.</li>
+              </ol>
             </div>
           </div>
 

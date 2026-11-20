@@ -1,0 +1,31 @@
+[
+  {
+    "namespace": "echoMicChild",
+    "functions": [
+      {
+        "name": "armCapture",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "originHint",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "disarmCapture",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "getDiagnostics",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      }
+    ]
+  }
+]

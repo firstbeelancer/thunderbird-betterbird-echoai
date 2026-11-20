@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EchoAI",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Персональный ИИ-ассистент для Betterbird и Thunderbird с подключением любых OpenAI-compatible API и прямым голосовым вводом в мультимодальную LLM.",
   "author": "Marina Kalmykova (firstbeelancer)",
   "homepage_url": "https://github.com/firstbeelancer/thunderbird-betterbird-echoai",
@@ -12,13 +12,21 @@
     }
   },
   "experiment_apis": {
-    "echoMic": {
-      "schema": "api/mic/schema.json",
+    "echoMicParent": {
+      "schema": "api/mic/parent-schema.json",
       "parent": {
         "scopes": ["addon_parent"],
-        "paths": [["echoMic"]],
-        "script": "api/mic/implementation.js",
+        "paths": [["echoMicParent"]],
+        "script": "api/mic/parent.js",
         "events": ["startup"]
+      }
+    },
+    "echoMicChild": {
+      "schema": "api/mic/child-schema.json",
+      "child": {
+        "scopes": ["addon_child"],
+        "paths": [["echoMicChild"]],
+        "script": "api/mic/child.js"
       }
     }
   },
@@ -38,10 +46,6 @@
   ],
   "host_permissions": [
     "https://*/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*"
-  ],
-  "optional_host_permissions": [
     "http://*/*"
   ],
   "background": {

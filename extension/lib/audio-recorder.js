@@ -76,38 +76,19 @@ function arrayBufferToBase64(buffer) {
 }
 
 export const MIC_TIMEOUT_CODE = "MIC_PROMPT_TIMEOUT";
+export const MIC_DENIED_BY_USER = "MIC_DENIED_BY_USER";
 
-export async function requestMicrophoneStream(timeoutMs = null) {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("В этом окне недоступен API микрофона (mediaDevices).");
-  }
-
-  // Гарантируем, что встроенный обработчик диалога микрофона EchoAI активен до вызова getUserMedia
-  let helperActive = false;
-  try {
-    if (browser?.echoMic?.getPermissionStatus) {
-      const st = await browser.echoMic.getPermissionStatus();
-      helperActive = Boolean(st?.observerActive);
-    }
-  } catch {
-    helperActive = false;
-  }
-
-  // Если нативный диалог активен, даём пользователю достаточно времени нажать «OK»
-  const effectiveTimeout = timeoutMs ?? (helperActive ? 35000 : 4500);
-
+function callGetUserMediaWithTimeout(timeoutMs) {
   return new Promise((resolve, reject) => {
     let settled = false;
 
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      const err = new Error(
-        "Не удалось получить отклик от микрофона вовремя. Попробуйте ещё раз или проверьте настройки микрофона в Windows и EchoAI."
-      );
+      const err = new Error("Не удалось дождаться отклика от микрофона.");
       err.code = MIC_TIMEOUT_CODE;
       reject(err);
-    }, effectiveTimeout);
+    }, timeoutMs);
 
     navigator.mediaDevices
       .getUserMedia({
@@ -144,6 +125,59 @@ export async function requestMicrophoneStream(timeoutMs = null) {
   });
 }
 
+export async function requestMicrophoneStream() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("В этом окне недоступен API микрофона (mediaDevices).");
+  }
+
+  const originHint = window.location.origin;
+
+  // Шаг 1: Явное разрешение пользователя на уровне самого EchoAI (нативный диалог в parent-процессе)
+  if (browser?.echoMicParent?.ensurePermission) {
+    const auth = await browser.echoMicParent.ensurePermission(originHint);
+    if (!auth?.allowed) {
+      const err = new Error(
+        auth?.state === "deny"
+          ? "Доступ к микрофону отклонён. Можно сбросить выбор в настройках EchoAI («Микрофон и тема»)."
+          : "Доступ к микрофону не был подтверждён."
+      );
+      err.code = MIC_DENIED_BY_USER;
+      err.name = "NotAllowedError";
+      throw err;
+    }
+  }
+
+  // Шаг 2: Пробуем перехват в том же процессе (addon_child) — без изменения глобальных prefs
+  const hasChild = Boolean(browser?.echoMicChild?.armCapture);
+  if (hasChild) {
+    await browser.echoMicChild.armCapture(originHint);
+    try {
+      const stream = await callGetUserMediaWithTimeout(1400);
+      await browser.echoMicChild.disarmCapture().catch(() => {});
+      return stream;
+    } catch (err) {
+      await browser.echoMicChild.disarmCapture().catch(() => {});
+      // Если пользователь/система реально запретили микрофон (не таймаут) — не идём в fallback
+      if (err?.code !== MIC_TIMEOUT_CODE) {
+        throw err;
+      }
+    }
+  }
+
+  // Шаг 3: После подтверждения пользователем — мгновенный scoped-bypass строго на время одного вызова
+  if (browser?.echoMicParent?.beginScopedCapture) {
+    await browser.echoMicParent.beginScopedCapture();
+    try {
+      return await callGetUserMediaWithTimeout(3500);
+    } finally {
+      await browser.echoMicParent.endScopedCapture().catch(() => {});
+    }
+  }
+
+  // Fallback если Experiment API вообще не загрузились
+  return callGetUserMediaWithTimeout(3500);
+}
+
 export class WavAudioRecorder {
   constructor({ onLevel, onTick } = {}) {
     this.onLevel = onLevel;
@@ -165,6 +199,9 @@ export class WavAudioRecorder {
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     this.audioCtx = new AudioCtx();
+    if (this.audioCtx.state === "suspended") {
+      this.audioCtx.resume().catch(() => {});
+    }
     this.sampleRate = this.audioCtx.sampleRate || 48000;
     this.source = this.audioCtx.createMediaStreamSource(this.stream);
     this.processor = this.audioCtx.createScriptProcessor(4096, 1, 1);

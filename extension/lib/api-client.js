@@ -435,6 +435,38 @@ export async function streamChatCompletion({
       }
     }
 
+    // Дочитываем остаток буфера, если последний SSE-чанк пришёл без \n в конце
+    buffer += decoder.decode();
+    if (buffer.trim().startsWith("data:")) {
+      const payloadStr = buffer.trim().slice(5).trim();
+      if (payloadStr && payloadStr !== "[DONE]") {
+        try {
+          const parsed = JSON.parse(payloadStr);
+          if (parsed?.usage) {
+            usage = {
+              promptTokens: parsed.usage.prompt_tokens || 0,
+              completionTokens: parsed.usage.completion_tokens || 0,
+              totalTokens: parsed.usage.total_tokens || ((parsed.usage.prompt_tokens || 0) + (parsed.usage.completion_tokens || 0)),
+              estimated: false
+            };
+            onUsage?.(usage);
+          }
+          const content = parsed?.choices?.[0]?.delta?.content;
+          if (typeof content === "string" && content.length > 0) {
+            const { visible } = filter.push(content);
+            if (visible) {
+              if (!hasVisibleStarted) {
+                hasVisibleStarted = true;
+                onStatus?.("streaming");
+              }
+              fullText += visible;
+              onDelta?.(visible, fullText);
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
     const tail = filter.flush();
     if (tail) {
       fullText += tail;

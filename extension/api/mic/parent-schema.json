@@ -1,0 +1,55 @@
+[
+  {
+    "namespace": "echoMicParent",
+    "functions": [
+      {
+        "name": "getPermissionStatus",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "originHint",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "ensurePermission",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "originHint",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "resetPermission",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "originHint",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "beginScopedCapture",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "endScopedCapture",
+        "type": "function",
+        "async": true,
+        "parameters": []
+      }
+    ]
+  }
+]

@@ -257,11 +257,11 @@ async function persistSettings(showToast = true) {
 async function ensureHostPermissionIfNeeded(rawUrl) {
   const origin = extractOriginPattern(rawUrl);
   if (!origin) return true;
+  if (!browser?.permissions?.contains) return true;
 
   try {
     const has = await browser.permissions.contains({ origins: [origin] });
     if (has) return true;
-    // Для нестандартных http:// хостов запрашиваем разрешение по клику пользователя
     return await browser.permissions.request({ origins: [origin] });
   } catch {
     return true;
@@ -402,8 +402,8 @@ themeButtons.forEach((btn) => {
 
 async function refreshMicPermissionUi() {
   try {
-    if (!browser?.echoMic?.getPermissionStatus) return;
-    const st = await browser.echoMic.getPermissionStatus();
+    if (!browser?.echoMicParent?.getPermissionStatus) return;
+    const st = await browser.echoMicParent.getPermissionStatus(window.location.origin);
     if (st.state === "allow") {
       showStatusBox(micStatus, "ok", "Доступ к микрофону для EchoAI разрешён.");
       resetMicBtn.hidden = false;
@@ -418,7 +418,7 @@ async function refreshMicPermissionUi() {
 
 resetMicBtn.addEventListener("click", async () => {
   try {
-    await browser.echoMic?.resetPermission?.();
+    await browser.echoMicParent?.resetPermission?.(window.location.origin);
     resetMicBtn.hidden = true;
     showStatusBox(micStatus, "info", "Выбор сброшен. Нажмите «Проверить микрофон» или кнопку микрофона в чате, чтобы выдать доступ заново.");
   } catch (err) {

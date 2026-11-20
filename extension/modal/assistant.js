@@ -680,7 +680,17 @@ async function startRecording() {
     micBtn.replaceChildren(createIcon("mic", "icon-lg"));
 
     if (err?.code === MIC_TIMEOUT_CODE) {
-      showError(err.message, [
+      let diagNote = "";
+      try {
+        if (!browser?.echoMicParent) {
+          diagNote = " (Встроенный модуль доступа к микрофону не загрузился в этой версии Betterbird.)";
+        } else if (browser?.echoMicChild?.getDiagnostics) {
+          const d = await browser.echoMicChild.getDiagnostics();
+          if (d?.error) diagNote = ` (${d.error})`;
+        }
+      } catch { /* ignore */ }
+
+      showError(`${err.message}${diagNote} Проверьте, подключён ли микрофон в Windows и разрешён ли доступ для Betterbird.`, [
         {
           label: "Настройки микрофона",
           onClick: () => browser.runtime.sendMessage({ type: "OPEN_MIC_PERMISSION_TAB" })

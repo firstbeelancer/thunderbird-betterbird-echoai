@@ -1,0 +1,21 @@
+[
+  {
+    "namespace": "echoMic",
+    "functions": [
+      {
+        "name": "getPermissionStatus",
+        "type": "function",
+        "async": true,
+        "parameters": [],
+        "description": "Возвращает текущий статус разрешения микрофона для EchoAI и активность обработчика диалога."
+      },
+      {
+        "name": "resetPermission",
+        "type": "function",
+        "async": true,
+        "parameters": [],
+        "description": "Сбрасывает сохранённое разрешение микрофона для EchoAI."
+      }
+    ]
+  }
+]

@@ -77,10 +77,24 @@ function arrayBufferToBase64(buffer) {
 
 export const MIC_TIMEOUT_CODE = "MIC_PROMPT_TIMEOUT";
 
-export function requestMicrophoneStream(timeoutMs = 3500) {
+export async function requestMicrophoneStream(timeoutMs = null) {
   if (!navigator.mediaDevices?.getUserMedia) {
-    return Promise.reject(new Error("В этом окне недоступен API микрофона (mediaDevices)."));
+    throw new Error("В этом окне недоступен API микрофона (mediaDevices).");
   }
+
+  // Гарантируем, что встроенный обработчик диалога микрофона EchoAI активен до вызова getUserMedia
+  let helperActive = false;
+  try {
+    if (browser?.echoMic?.getPermissionStatus) {
+      const st = await browser.echoMic.getPermissionStatus();
+      helperActive = Boolean(st?.observerActive);
+    }
+  } catch {
+    helperActive = false;
+  }
+
+  // Если нативный диалог активен, даём пользователю достаточно времени нажать «OK»
+  const effectiveTimeout = timeoutMs ?? (helperActive ? 35000 : 4500);
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -89,11 +103,11 @@ export function requestMicrophoneStream(timeoutMs = 3500) {
       if (settled) return;
       settled = true;
       const err = new Error(
-        "Betterbird / Thunderbird не показал окно запроса микрофона (это особенность движка). Включите параметр media.navigator.permission.disabled = true в Редакторе настроек Betterbird."
+        "Не удалось получить отклик от микрофона вовремя. Попробуйте ещё раз или проверьте настройки микрофона в Windows и EchoAI."
       );
       err.code = MIC_TIMEOUT_CODE;
       reject(err);
-    }, timeoutMs);
+    }, effectiveTimeout);
 
     navigator.mediaDevices
       .getUserMedia({
@@ -113,7 +127,6 @@ export function requestMicrophoneStream(timeoutMs = 3500) {
       .then((stream) => {
         clearTimeout(timer);
         if (settled) {
-          // Если промис разрешился уже после таймаута — сразу освобождаем микрофон
           for (const t of stream.getTracks()) {
             try { t.stop(); } catch { /* ignore */ }
           }
@@ -148,7 +161,7 @@ export class WavAudioRecorder {
 
   async start() {
     if (this.recording) return;
-    this.stream = await requestMicrophoneStream(3500);
+    this.stream = await requestMicrophoneStream();
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     this.audioCtx = new AudioCtx();

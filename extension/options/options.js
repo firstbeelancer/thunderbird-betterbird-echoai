@@ -59,7 +59,7 @@ const defaultReadLangSelect = document.getElementById("defaultReadLangSelect");
 const defaultComposeLangSelect = document.getElementById("defaultComposeLangSelect");
 
 const checkMicBtn = document.getElementById("checkMicBtn");
-const copyPrefBtn = document.getElementById("copyPrefBtn");
+const resetMicBtn = document.getElementById("resetMicBtn");
 const micStatus = document.getElementById("micStatus");
 const themeButtons = Array.from(document.querySelectorAll(".theme-opt"));
 const privacyShield = document.getElementById("privacyShield");
@@ -74,7 +74,7 @@ toggleKeyBtn.appendChild(createIcon("eye"));
 fetchModelsBtn.replaceChildren(createIcon("refresh", "icon-sm"), document.createTextNode("Загрузить модели"));
 testConnBtn.replaceChildren(createIcon("shield", "icon-sm"), document.createTextNode("Протестировать подключение"));
 checkMicBtn.replaceChildren(createIcon("mic", "icon-sm"), document.createTextNode("Проверить микрофон"));
-copyPrefBtn.replaceChildren(createIcon("copy", "icon-sm"), document.createTextNode("Копировать"));
+resetMicBtn.replaceChildren(createIcon("refresh", "icon-sm"), document.createTextNode("Сбросить разрешение"));
 privacyShield.appendChild(createIcon("shield", "icon-lg"));
 
 let settings = null;
@@ -400,37 +400,51 @@ themeButtons.forEach((btn) => {
   });
 });
 
-copyPrefBtn.addEventListener("click", async () => {
+async function refreshMicPermissionUi() {
   try {
-    await navigator.clipboard.writeText("media.navigator.permission.disabled");
-    copyPrefBtn.replaceChildren(createIcon("check", "icon-sm"), document.createTextNode("Скопировано"));
-    setTimeout(() => {
-      copyPrefBtn.replaceChildren(createIcon("copy", "icon-sm"), document.createTextNode("Копировать"));
-    }, 1500);
+    if (!browser?.echoMic?.getPermissionStatus) return;
+    const st = await browser.echoMic.getPermissionStatus();
+    if (st.state === "allow") {
+      showStatusBox(micStatus, "ok", "Доступ к микрофону для EchoAI разрешён.");
+      resetMicBtn.hidden = false;
+    } else if (st.state === "deny") {
+      showStatusBox(micStatus, "error", "Доступ к микрофону для EchoAI сейчас запрещён. Нажмите «Сбросить разрешение», чтобы запросить его снова.");
+      resetMicBtn.hidden = false;
+    } else {
+      resetMicBtn.hidden = true;
+    }
   } catch { /* ignore */ }
+}
+
+resetMicBtn.addEventListener("click", async () => {
+  try {
+    await browser.echoMic?.resetPermission?.();
+    resetMicBtn.hidden = true;
+    showStatusBox(micStatus, "info", "Выбор сброшен. Нажмите «Проверить микрофон» или кнопку микрофона в чате, чтобы выдать доступ заново.");
+  } catch (err) {
+    showStatusBox(micStatus, "error", `Не удалось сбросить разрешение: ${err?.message || err}`);
+  }
 });
 
 checkMicBtn.addEventListener("click", async () => {
   checkMicBtn.disabled = true;
-  showStatusBox(micStatus, "info", "Проверяю доступ к микрофону…");
+  showStatusBox(micStatus, "info", "Подключаюсь к микрофону (при первом запуске подтвердите диалог Betterbird)…");
   try {
-    const stream = await requestMicrophoneStream(3500);
+    const stream = await requestMicrophoneStream();
     for (const track of stream.getTracks()) track.stop();
-    showStatusBox(micStatus, "ok", "Доступ к микрофону работает. Голосовой ввод готов в окне ассистента.");
+    showStatusBox(micStatus, "ok", "Микрофон работает. Голосовой ввод готов в окне ассистента.");
+    resetMicBtn.hidden = false;
   } catch (err) {
     if (err?.code === MIC_TIMEOUT_CODE) {
-      showStatusBox(
-        micStatus,
-        "error",
-        "Запрос микрофона завис: включите media.navigator.permission.disabled = true в Редакторе настроек Betterbird по инструкции ниже и нажмите «Проверить микрофон» ещё раз."
-      );
+      showStatusBox(micStatus, "error", err.message);
     } else {
       showStatusBox(
         micStatus,
         "error",
-        `Доступ к микрофону не получен (${err?.message || err}). Проверьте параметр media.navigator.permission.disabled и доступ Windows для Betterbird.`
+        `Доступ к микрофону не получен (${err?.message || err}). Если вы ранее нажали «Отмена», нажмите «Сбросить разрешение» и проверьте доступ микрофона в настройках Windows.`
       );
     }
+    await refreshMicPermissionUi();
   } finally {
     checkMicBtn.disabled = false;
   }
@@ -467,6 +481,7 @@ async function init() {
   renderActiveProfileForm();
   renderPromptsForm();
   renderThemeSelector();
+  await refreshMicPermissionUi();
 
   if (window.location.hash === "#mic") {
     switchSection("mic");

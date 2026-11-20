@@ -680,29 +680,17 @@ async function startRecording() {
     micBtn.replaceChildren(createIcon("mic", "icon-lg"));
 
     if (err?.code === MIC_TIMEOUT_CODE) {
-      showError(
-        "В Betterbird / Thunderbird нет встроенного диалога разрешения микрофона, поэтому доступ нужно включить один раз в Редакторе настроек Betterbird: установите media.navigator.permission.disabled = true.",
-        [
-          {
-            label: "Скопировать имя параметра",
-            onClick: async (e) => {
-              try {
-                await navigator.clipboard.writeText("media.navigator.permission.disabled");
-                e.currentTarget.textContent = "Скопировано";
-              } catch { /* ignore */ }
-            }
-          },
-          {
-            label: "Пошаговая инструкция",
-            onClick: () => browser.runtime.sendMessage({ type: "OPEN_MIC_PERMISSION_TAB" })
-          }
-        ]
-      );
+      showError(err.message, [
+        {
+          label: "Настройки микрофона",
+          onClick: () => browser.runtime.sendMessage({ type: "OPEN_MIC_PERMISSION_TAB" })
+        }
+      ]);
       return;
     }
 
     const msg = err?.name === "NotAllowedError" || /permission|denied/i.test(err?.message || "")
-      ? "Нет доступа к микрофону. Проверьте разрешения Windows для Betterbird и параметр media.navigator.permission.disabled = true."
+      ? "Доступ к микрофону отклонён. Вы можете сбросить выбор и разрешить микрофон в настройках EchoAI, а также проверить доступ микрофона для Betterbird в Windows."
       : `Не удалось включить микрофон: ${err?.message || err}`;
 
     showError(msg, [

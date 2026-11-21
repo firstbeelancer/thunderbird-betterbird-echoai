@@ -4,6 +4,7 @@
 с автоматической валидацией manifest.json и проверкой на случайные секреты.
 """
 
+import hashlib
 import json
 import re
 import shutil
@@ -15,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 EXT_DIR = ROOT / "extension"
 DIST_DIR = ROOT / "dist"
 DOCS_DOWNLOAD_DIR = ROOT / "docs" / "download"
+UPDATES_JSON = ROOT / "docs" / "updates.json"
+PAGES_BASE_URL = "https://firstbeelancer.github.io/thunderbird-betterbird-echoai"
 
 SECRET_PATTERNS = [
     re.compile(r"ghp_[A-Za-z0-9]{20,}"),
@@ -74,8 +77,30 @@ def main() -> int:
     docs_copy = DOCS_DOWNLOAD_DIR / out_path.name
     shutil.copy2(out_path, docs_copy)
 
+    # updates.json для кнопки «Проверить обновления» (формат Mozilla update manifest).
+    # Намеренно НЕ подключён через update_url в manifest.json — проверка только по клику.
+    digest = hashlib.sha256(docs_copy.read_bytes()).hexdigest()
+    addon_id = manifest["browser_specific_settings"]["gecko"]["id"]
+    min_version = manifest["browser_specific_settings"]["gecko"].get("strict_min_version", "128.0")
+    updates = {
+        "addons": {
+            addon_id: {
+                "updates": [
+                    {
+                        "version": version,
+                        "update_link": f"{PAGES_BASE_URL}/download/{out_path.name}",
+                        "update_hash": f"sha256:{digest}",
+                        "applications": {"gecko": {"strict_min_version": min_version}},
+                    }
+                ]
+            }
+        }
+    }
+    UPDATES_JSON.write_text(json.dumps(updates, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
     print(f"Packed {file_count} files -> {out_path.relative_to(ROOT)} ({out_path.stat().st_size} bytes)")
     print(f"Synced -> {docs_copy.relative_to(ROOT)}")
+    print(f"Updates manifest -> {UPDATES_JSON.relative_to(ROOT)} (sha256:{digest[:12]}...)")
     return 0
 
 

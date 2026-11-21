@@ -303,56 +303,10 @@ body {
   padding: 0;
 }
 
-/* Голосовая заметка в пузыре пользователя */
-.voice-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.voice-play-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--user-bubble-text);
-  color: var(--user-bubble-bg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: transform 120ms ease;
-}
-
-.voice-play-btn:hover {
-  transform: scale(1.06);
-}
-
-.voice-play-btn:focus-visible {
-  outline-color: var(--user-bubble-text);
-}
-
-.voice-play-btn svg.icon {
-  fill: currentColor;
-}
-
-.voice-chip-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.voice-chip-wave {
-  display: inline-flex;
-  opacity: 0.85;
-}
-
-.voice-chip-dur {
-  opacity: 0.8;
-  font-size: 12px;
+/* Расшифровка голосовой заметки в процессе */
+.msg-pending {
+  opacity: 0.78;
+  font-style: italic;
 }
 
 /* Действия у каждой реплики */

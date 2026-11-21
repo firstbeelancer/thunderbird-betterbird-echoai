@@ -12,15 +12,28 @@
       <div class="opt-brand">
         <img src="../icons/echoai.svg" alt="" width="40" height="40" class="opt-logo">
         <div>
-          <h1 class="opt-title">EchoAI</h1>
+          <h1 class="opt-title">EchoAI <span id="versionBadge" class="version-badge tabular"></span></h1>
           <p class="opt-subtitle">Настройки подключений, стиля ответов и голосового ввода</p>
         </div>
       </div>
       <div class="opt-header-right">
         <span id="saveIndicator" class="save-indicator" hidden></span>
+        <button id="checkUpdateBtn" class="btn" type="button"></button>
         <button id="saveBtn" class="btn btn-primary" type="button">Сохранить</button>
       </div>
     </header>
+
+    <div id="updatePanel" class="update-panel" role="status" aria-live="polite" hidden>
+      <span id="updateIcon" class="update-panel-icon"></span>
+      <div class="update-panel-body">
+        <div id="updateTitle" class="update-panel-title"></div>
+        <div id="updateText" class="update-panel-text"></div>
+      </div>
+      <div class="update-panel-actions">
+        <button id="installUpdateBtn" class="btn btn-primary" type="button" hidden></button>
+        <button id="openReleaseBtn" class="btn" type="button" hidden>Страница загрузки</button>
+      </div>
+    </div>
 
     <div class="opt-layout">
       <nav class="opt-nav" aria-label="Разделы настроек">

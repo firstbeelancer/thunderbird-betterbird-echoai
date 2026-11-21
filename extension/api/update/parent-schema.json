@@ -1,0 +1,23 @@
+[
+  {
+    "namespace": "echoUpdate",
+    "functions": [
+      {
+        "name": "installFromUrl",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          {
+            "name": "url",
+            "type": "string"
+          },
+          {
+            "name": "hash",
+            "type": "string",
+            "optional": true
+          }
+        ]
+      }
+    ]
+  }
+]

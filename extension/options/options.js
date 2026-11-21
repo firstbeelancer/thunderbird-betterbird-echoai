@@ -15,6 +15,13 @@ import { DEFAULT_PROMPTS, LANGUAGE_OPTIONS } from "../lib/prompts.js";
 import { fetchModels, testConnection } from "../lib/api-client.js";
 import { requestMicrophoneStream, MIC_TIMEOUT_CODE } from "../lib/audio-recorder.js";
 import { createIcon } from "../lib/icons.js";
+import {
+  checkForUpdate,
+  compareVersions,
+  getCurrentVersion,
+  openExternal,
+  PROJECT_PAGE_URL
+} from "../lib/updater.js";
 
 // Navigation
 const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
@@ -452,6 +459,144 @@ checkMicBtn.addEventListener("click", async () => {
 
 saveBtn.addEventListener("click", () => persistSettings(true));
 
+/* ---------- Версия и обновления (только по клику) ---------- */
+
+const UPDATE_PENDING_KEY = "echoai_update_pending_v1";
+const versionBadge = document.getElementById("versionBadge");
+const checkUpdateBtn = document.getElementById("checkUpdateBtn");
+const updatePanel = document.getElementById("updatePanel");
+const updateIcon = document.getElementById("updateIcon");
+const updateTitle = document.getElementById("updateTitle");
+const updateText = document.getElementById("updateText");
+const installUpdateBtn = document.getElementById("installUpdateBtn");
+const openReleaseBtn = document.getElementById("openReleaseBtn");
+
+const currentVersion = getCurrentVersion();
+versionBadge.textContent = `v${currentVersion}`;
+versionBadge.title = `Установлена версия ${currentVersion}`;
+
+function setCheckBtn(loading) {
+  checkUpdateBtn.disabled = loading;
+  checkUpdateBtn.replaceChildren(
+    createIcon(loading ? "loader" : "refresh", loading ? "icon-sm spin" : "icon-sm"),
+    document.createTextNode(loading ? "Проверяю…" : "Проверить обновления")
+  );
+}
+setCheckBtn(false);
+
+let pendingUpdate = null;
+
+function showUpdatePanel(kind, title, text, { install = false, release = false } = {}) {
+  updatePanel.className = `update-panel is-${kind}`;
+  const iconName = kind === "ok" ? "check" : kind === "error" ? "alert" : kind === "new" ? "download" : "loader";
+  updateIcon.replaceChildren(createIcon(iconName, kind === "busy" ? "icon-lg spin" : "icon-lg"));
+  updateTitle.textContent = title;
+  updateText.textContent = text;
+  installUpdateBtn.hidden = !install;
+  openReleaseBtn.hidden = !release;
+  updatePanel.hidden = false;
+}
+
+checkUpdateBtn.addEventListener("click", async () => {
+  setCheckBtn(true);
+  pendingUpdate = null;
+  try {
+    const info = await checkForUpdate();
+    if (info.isNewer) {
+      pendingUpdate = info;
+      installUpdateBtn.replaceChildren(
+        createIcon("download", "icon-sm"),
+        document.createTextNode(`Установить ${info.latest}`)
+      );
+      showUpdatePanel(
+        "new",
+        `Доступна версия ${info.latest}`,
+        `У вас установлена ${info.current}. Обновление скачается с официальной страницы проекта на GitHub.`,
+        { install: true, release: true }
+      );
+    } else {
+      showUpdatePanel("ok", "У вас последняя версия", `EchoAI ${info.current} — новее на GitHub пока нет.`);
+    }
+  } catch (err) {
+    showUpdatePanel("error", "Не удалось проверить обновления", err?.message || String(err), { release: true });
+  } finally {
+    setCheckBtn(false);
+  }
+});
+
+installUpdateBtn.addEventListener("click", async () => {
+  if (!pendingUpdate) return;
+  const target = pendingUpdate;
+
+  if (!browser.echoUpdate?.installFromUrl) {
+    showUpdatePanel(
+      "error",
+      "Автоустановка недоступна в этой сборке",
+      "Скачайте файл со страницы проекта и установите через «Дополнения → Установить из файла».",
+      { release: true }
+    );
+    return;
+  }
+
+  installUpdateBtn.disabled = true;
+  checkUpdateBtn.disabled = true;
+  showUpdatePanel(
+    "busy",
+    `Устанавливаю ${target.latest}…`,
+    "Не закрывайте Betterbird. Окно настроек может перезапуститься само — это нормально."
+  );
+
+  try {
+    await persistSettings(false);
+    await browser.storage.local.set({
+      [UPDATE_PENDING_KEY]: { version: target.latest, at: Date.now() }
+    });
+    const res = await browser.echoUpdate.installFromUrl(target.updateLink, target.updateHash);
+    if (!res?.ok) throw new Error(res?.error || "Неизвестная ошибка установки.");
+    showUpdatePanel(
+      "ok",
+      `Установлена версия ${res.version || target.latest}`,
+      "Перезапустите Betterbird, чтобы обновление полностью применилось."
+    );
+  } catch (err) {
+    await browser.storage.local.remove(UPDATE_PENDING_KEY).catch(() => {});
+    showUpdatePanel(
+      "error",
+      "Обновление не установилось",
+      `${err?.message || err} Можно скачать файл вручную со страницы проекта.`,
+      { release: true }
+    );
+  } finally {
+    installUpdateBtn.disabled = false;
+    checkUpdateBtn.disabled = false;
+  }
+});
+
+openReleaseBtn.addEventListener("click", () => openExternal(PROJECT_PAGE_URL));
+
+// После самообновления страница настроек перезапускается — показываем итог
+async function reportFinishedUpdate() {
+  try {
+    const stored = await browser.storage.local.get(UPDATE_PENDING_KEY);
+    const pending = stored?.[UPDATE_PENDING_KEY];
+    if (!pending) return;
+    await browser.storage.local.remove(UPDATE_PENDING_KEY);
+    if (compareVersions(currentVersion, pending.version) >= 0) {
+      showUpdatePanel(
+        "ok",
+        `EchoAI обновлён до ${currentVersion}`,
+        "Если что-то работает непривычно, перезапустите Betterbird один раз."
+      );
+    } else if (Date.now() - (pending.at || 0) < 15 * 60 * 1000) {
+      showUpdatePanel(
+        "new",
+        `Обновление до ${pending.version} ждёт перезапуска`,
+        "Перезапустите Betterbird, чтобы завершить установку."
+      );
+    }
+  } catch { /* ignore */ }
+}
+
 /* ---------- Init ---------- */
 
 async function init() {
@@ -482,6 +627,7 @@ async function init() {
   renderPromptsForm();
   renderThemeSelector();
   await refreshMicPermissionUi();
+  await reportFinishedUpdate();
 
   if (window.location.hash === "#mic") {
     switchSection("mic");

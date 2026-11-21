@@ -488,4 +488,10 @@ async function init() {
   }
 }
 
+// Смена #hash без перезагрузки (например, «Настройки микрофона» из окна ассистента)
+window.addEventListener("hashchange", () => {
+  const name = window.location.hash.replace(/^#/, "");
+  if (sections[name]) switchSection(name);
+});
+
 init();

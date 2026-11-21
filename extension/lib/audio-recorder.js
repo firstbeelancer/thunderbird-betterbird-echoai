@@ -197,14 +197,20 @@ export class WavAudioRecorder {
     if (this.recording) return;
     this.stream = await requestMicrophoneStream();
 
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    this.audioCtx = new AudioCtx();
-    if (this.audioCtx.state === "suspended") {
-      this.audioCtx.resume().catch(() => {});
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.audioCtx = new AudioCtx();
+      if (this.audioCtx.state === "suspended") {
+        this.audioCtx.resume().catch(() => {});
+      }
+      this.sampleRate = this.audioCtx.sampleRate || 48000;
+      this.source = this.audioCtx.createMediaStreamSource(this.stream);
+      this.processor = this.audioCtx.createScriptProcessor(4096, 1, 1);
+    } catch (err) {
+      // Не оставляем микрофон включённым, если не удалось собрать аудио-граф
+      this._cleanup();
+      throw err;
     }
-    this.sampleRate = this.audioCtx.sampleRate || 48000;
-    this.source = this.audioCtx.createMediaStreamSource(this.stream);
-    this.processor = this.audioCtx.createScriptProcessor(4096, 1, 1);
 
     this.chunks = [];
     this.recording = true;

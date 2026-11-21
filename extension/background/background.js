@@ -133,7 +133,10 @@ async function openOptionsTab(hash = "") {
     const allTabs = await browser.tabs.query({});
     const existing = allTabs.find((t) => t.url && t.url.startsWith(baseUrl));
     if (existing) {
-      await browser.tabs.update(existing.id, { active: true, url: targetUrl });
+      // Не перезагружаем открытые настройки без нужды — иначе теряются несохранённые правки
+      const update = { active: true };
+      if (hash && existing.url !== targetUrl) update.url = targetUrl;
+      await browser.tabs.update(existing.id, update);
       if (existing.windowId) {
         await browser.windows.update(existing.windowId, { focused: true });
       }

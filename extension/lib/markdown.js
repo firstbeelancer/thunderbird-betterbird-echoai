@@ -3,7 +3,8 @@
  */
 
 function appendInlineFormatted(parent, text) {
-  const tokenRegex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  // Курсив только для *слов*, а не для «2 * 3 * 4»
+  const tokenRegex = /(\*\*[^*\n]+\*\*|\*(?=\S)[^*\n]+(?<=\S)\*|`[^`\n]+`)/g;
   let lastIndex = 0;
   let match;
 

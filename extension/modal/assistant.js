@@ -84,6 +84,12 @@ let isGenerating = false;
 let activeAbortController = null;
 let recorder = null;
 let activeAudioEl = null;
+const createdObjectUrls = [];
+
+window.addEventListener("pagehide", () => {
+  if (recorder) recorder.cancel();
+  for (const url of createdObjectUrls) URL.revokeObjectURL(url);
+});
 
 /**
  * apiMessages: массив сообщений OpenAI (без системного — системный собирается динамически)
@@ -270,6 +276,7 @@ function createVoiceChipElement(audioData) {
   playBtn.appendChild(createIcon("play", "icon-sm"));
 
   const audio = new Audio(audioData.objectUrl);
+  createdObjectUrls.push(audioData.objectUrl);
 
   const resetIcon = () => {
     playBtn.replaceChildren(createIcon("play", "icon-sm"));
@@ -559,7 +566,14 @@ async function runModelTurn() {
         apiMessages.push({ role: "assistant", content: assistantUiMsg.text });
       }
     } else {
+      if (rendered) assistantUiMsg._actionsEl.hidden = false;
       showError(err?.message || String(err), [
+        {
+          label: "Повторить",
+          onClick: () => {
+            if (!isGenerating) runModelTurn();
+          }
+        },
         {
           label: "Проверить настройки",
           onClick: () => browser.runtime.sendMessage({ type: "OPEN_OPTIONS" })
@@ -643,14 +657,27 @@ async function sendVoiceRecording(audioData) {
 
 /* ---------- Voice Recording Controls ---------- */
 
+const meterBars = Array.from(recordMeter.querySelectorAll("span"));
+const meterHistory = new Array(meterBars.length).fill(0);
+
+// Бегущая волна: новые уровни входят справа, старые уезжают влево
 function updateMeterBars(level) {
-  const bars = Array.from(recordMeter.querySelectorAll("span"));
-  const weights = [0.45, 0.75, 0.95, 1, 0.9, 0.7, 0.5];
-  bars.forEach((bar, idx) => {
-    const jitter = 0.8 + Math.random() * 0.4;
-    const h = Math.max(4, Math.min(20, Math.round(4 + level * 18 * weights[idx] * jitter)));
+  meterHistory.shift();
+  meterHistory.push(Math.max(0, Math.min(1, level)));
+  meterBars.forEach((bar, idx) => {
+    const lvl = meterHistory[idx];
+    const h = Math.max(3, Math.min(22, Math.round(3 + lvl * 19)));
     bar.style.height = `${h}px`;
+    bar.style.opacity = String(0.35 + lvl * 0.65);
   });
+}
+
+function resetMeterBars() {
+  meterHistory.fill(0);
+  for (const bar of meterBars) {
+    bar.style.height = "3px";
+    bar.style.opacity = "0.35";
+  }
 }
 
 async function startRecording() {
@@ -669,6 +696,7 @@ async function startRecording() {
 
   try {
     recordTimer.textContent = "0:00";
+    resetMeterBars();
     await recorder.start();
     micBtn.disabled = false;
     micBtn.replaceChildren(createIcon("mic", "icon-lg"));
@@ -812,6 +840,7 @@ browser.storage.onChanged.addListener(async (changes, area) => {
   applyTheme(settings.theme);
   profile = getActiveProfile(settings);
   modelPill.textContent = profile?.model || "Модель не выбрана";
+  modelPill.classList.toggle("is-missing", !profile?.model);
 });
 
 closeBtn.addEventListener("click", () => {
@@ -907,6 +936,7 @@ async function init() {
   profile = getActiveProfile(settings);
 
   modelPill.textContent = profile?.model || "Модель не выбрана";
+  modelPill.classList.toggle("is-missing", !profile?.model);
 
   if (!sessionId) {
     showError("Сессия не найдена. Вызовите EchoAI через кнопку в письме.");

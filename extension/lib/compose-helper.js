@@ -205,6 +205,35 @@ function buildUpdatedHtml(existingHtml, newText, replaceExistingDraft) {
   return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
 }
 
+/**
+ * Заменяет фрагмент текста внутри одного текстового узла HTML (вне подписи и цитаты).
+ * Возвращает новый HTML или null, если фрагмент не найден.
+ */
+function replaceTextInHtml(existingHtml, original, replacement) {
+  const needle = String(original || "").trim();
+  if (!needle) return null;
+  const doc = new DOMParser().parseFromString(existingHtml || "", "text/html");
+  const protectedSel = ".moz-signature, .moz-cite-prefix, blockquote, .moz-forward-container";
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.parentElement?.closest(protectedSel)) continue;
+    const idx = node.data.indexOf(needle);
+    if (idx === -1) continue;
+    const after = node.splitText(idx);
+    after.data = after.data.slice(needle.length);
+    const lines = String(replacement || "").replace(/\r\n/g, "\n").trim().split("\n");
+    const frag = doc.createDocumentFragment();
+    lines.forEach((line, i) => {
+      if (i > 0) frag.appendChild(doc.createElement("br"));
+      frag.appendChild(doc.createTextNode(line));
+    });
+    after.parentNode.insertBefore(frag, after);
+    return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
+  }
+  return null;
+}
+
 function buildUpdatedPlainText(existingPlain, newText, replaceExistingDraft) {
   const cleanNew = String(newText || "").replace(/\r\n/g, "\n").trim();
   const lines = String(existingPlain || "").replace(/\r\n/g, "\n").split("\n");
@@ -302,13 +331,22 @@ export async function applyTextToComposeTab(tabId, text, { mode = "insert", orig
   if (details.isPlainText) {
     let updated;
     if (mode === "replace_selection" && originalSelection && (details.plainTextBody || "").includes(originalSelection)) {
-      updated = details.plainTextBody.replace(originalSelection, text.trim());
+      // Функция-заменитель: иначе "$&", "$1" и т.п. в ответе модели интерпретируются как шаблоны
+      updated = details.plainTextBody.replace(originalSelection, () => text.trim());
     } else {
       updated = buildUpdatedPlainText(details.plainTextBody || "", text, replaceDraft);
     }
     await browser.compose.setComposeDetails(tabId, { plainTextBody: updated });
   } else {
-    const updated = buildUpdatedHtml(details.body || "", text, replaceDraft);
+    let updated = null;
+    if (mode === "replace_selection" && originalSelection) {
+      // Выделение потерялось (окно ассистента забрало фокус) — заменяем фрагмент в HTML,
+      // а не дописываем улучшенный текст поверх оригинала
+      updated = replaceTextInHtml(details.body || "", originalSelection, text);
+    }
+    if (!updated) {
+      updated = buildUpdatedHtml(details.body || "", text, replaceDraft);
+    }
     await browser.compose.setComposeDetails(tabId, { body: updated });
   }
 

@@ -37,14 +37,14 @@
       <div id="messagesList" class="messages-list"></div>
 
       <!-- Live animated AI status (never exposes raw chain-of-thought) -->
-      <div id="statusIndicator" class="status-indicator" hidden>
-        <div class="status-dots" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
+      <div id="statusIndicator" class="status-indicator" role="status" aria-live="polite" hidden>
+        <span class="status-echo" aria-hidden="true">
+          <span class="echo-core"></span><span class="echo-ring"></span><span class="echo-ring"></span>
+        </span>
         <span id="statusText" class="status-text">Думает…</span>
       </div>
 
-      <div id="errorBanner" class="error-banner" hidden>
+      <div id="errorBanner" class="error-banner" role="alert" hidden>
         <span id="errorIcon" class="error-banner-icon"></span>
         <div class="error-banner-content">
           <div id="errorText"></div>
@@ -114,7 +114,7 @@
             <span class="record-label">Запись голоса</span>
             <span id="recordTimer" class="record-timer tabular">0:00</span>
             <div id="recordMeter" class="record-meter" aria-hidden="true">
-              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
           </div>
           <div class="record-actions">

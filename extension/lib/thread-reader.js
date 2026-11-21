@@ -196,14 +196,18 @@ export async function readFullThread(messageId, maxChars = 48000) {
           ...extractMessageIds(candHeaders["in-reply-to"]),
           ...extractMessageIds(candHeaders["message-id"])
         ];
-        // Берём письмо, если оно связано по References/In-Reply-To ИЛИ лежит в том же аккаунте и совпадает тема
+        // Берём письмо, только если оно связано по References/In-Reply-To.
+        // Без заголовков связи (редкие клиенты) — только из того же аккаунта и с явным "Re:"/"Fwd:" в теме,
+        // чтобы не подтягивать посторонние письма с совпадающей темой ("Счёт", "Отчёт" и т.п.).
         const linked = candRefs.some((id) => refIds.has(id));
         const sameAccount =
-          cand.folder?.accountId && rootHeader.folder?.accountId
-            ? cand.folder.accountId === rootHeader.folder.accountId
-            : true;
+          Boolean(cand.folder?.accountId && rootHeader.folder?.accountId) &&
+          cand.folder.accountId === rootHeader.folder.accountId;
+        const hasNoThreadHeaders = !candHeaders["references"] && !candHeaders["in-reply-to"];
+        const looksLikeReply = /^\s*(re|fwd|fw|aw|ответ|пересл)\s*(\[\d+\])?:/i.test(cand.subject || "");
+        const weakLink = hasNoThreadHeaders && sameAccount && looksLikeReply;
 
-        if (linked || sameAccount) {
+        if (linked || weakLink) {
           byId.set(cand.id, { header: cand, full });
           for (const id of candRefs) refIds.add(id);
         }
